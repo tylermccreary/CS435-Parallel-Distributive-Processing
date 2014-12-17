@@ -1,0 +1,111 @@
+/*	A program to determine a common meeting time between three people.
+		Author: Tyler McCreary*/
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+
+int *person_2;
+int *person_3;
+int size_2;
+int size_3;
+
+/*	Each time that person_1 can meet will be compared to all the times
+		that the others can meet (in its own thread).
+*/
+void *compare_times (void *arg)
+{
+	int i;
+	int time = *(int *) arg;
+	for (i = 0; i < size_2; i++)
+	{
+		if (person_2[i] == time)
+		{
+			int j;
+			for (j = 0; j < size_3; j++)
+			{
+				if (person_3[j] == time)
+				{
+					printf("%d is a common meeting time.\n", time);
+				}
+			}
+		}
+	}
+	return (NULL);			
+}
+
+int main(int arc, char *argv[])
+{
+	FILE *file = fopen( argv[1], "r" );
+	int *person_1;
+	int size;
+	int array;
+	int i;
+	int n_threads;
+	/*	Assign values to each array that keeps track of meeting times for
+			each person. */
+    array = 0;
+	while (array < 3)
+	{
+		fscanf(file, "%d", &size);
+		if(array == 0)
+		{
+			n_threads = size;
+			person_1 = (int *) malloc (sizeof(int) * size);
+			for(i = 0; i < size; i++)
+			{
+				fscanf( file, "%d", &person_1[i] );
+			}
+		}
+		else if(array == 1)
+		{
+			size_2 = size;
+			person_2 = (int *) malloc (sizeof(int) * size);
+			for(i = 0; i < size; i++)
+			{
+				fscanf( file, "%d", &person_2[i] );
+			}
+		}
+		else
+		{
+			size_3 = size;
+			person_3 = (int *) malloc (sizeof(int) * size);
+			for(i = 0; i < size; i++)
+			{
+				fscanf( file, "%d", &person_3[i] );
+			}
+		}
+        array++;
+	}
+
+	pthread_t *tid[n_threads];
+
+	/* Allocate memory for the threads. */
+	for(i = 0; i < n_threads; i++)
+	{
+		tid[i] = (pthread_t *) malloc(sizeof(pthread_t));
+	}
+	
+	/* Create the threads. */
+	for(i = 0; i < n_threads; i++)
+	{
+		int *the_param = (int *) malloc (sizeof(int));
+		*the_param = person_1[i];
+		if(pthread_create (tid[i], NULL, compare_times, (void *) the_param))
+		{
+			fprintf(stderr, "Error creating thread %d.\n", i);
+			exit(-1);
+		}
+	}
+
+	/* Join the threads.*/
+	for(i = 0; i < n_threads; i ++)
+	{
+		if(pthread_join(*tid[i], NULL))
+		{
+			fprintf(stderr, "Error joining with thread %d.", i);
+			exit(-1);
+		}
+	}
+}
+
+
